@@ -1190,7 +1190,7 @@ app.get('/count_rows_lotto', (req, res) => {
             return res.status(404).send('ไม่พบข้อมูลจำนวนแถวของล็อตโต้');
         }
 
-        // Send back the count of rows
-        res.status(200).json( results[0].total );
+        // Send back the count of rows in the desired format
+        res.status(200).json([results[0].total]);
     });
 });
