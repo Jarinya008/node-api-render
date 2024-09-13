@@ -898,91 +898,52 @@ app.get('/check_reward', (req, res) => {
 // });
 
 
-app.post('/up_reward', (req, res) => {
+app.post('/up_reward', async (req, res) => {
     const { member_id, lotto_id } = req.body;
-    
+
     if (!lotto_id || !member_id) {
         return res.status(400).json({ error: 'lotto_id and member_id are required' });
     }
 
-    // คำสั่ง SQL เพื่อดึงข้อมูลราคา (price) ของรางวัลจากตาราง reward
-    const sqlSelect = "SELECT price FROM reward WHERE lotto_id = ?";
-
-    db.query(sqlSelect, [lotto_id], (err, result) => {
-        if (err) {
-            console.error('Error executing query:', err);
-            return res.status(500).json({ error: 'Error retrieving reward data' });
-        }
+    try {
+        // Retrieve the reward price
+        const sqlSelect = "SELECT price FROM reward WHERE lotto_id = ?";
+        const [result] = await db.promise().query(sqlSelect, [lotto_id]);
 
         if (result.length === 0) {
             return res.status(404).json({ message: 'ไม่พบข้อมูลรางวัลสำหรับ lotto_id นี้' });
         }
 
-        // ดึงข้อมูลราคาจากผลลัพธ์ของ Query
         const price = result[0].price;
 
-        // คำสั่ง SQL เพื่ออัปเดตจำนวนเงินของสมาชิกในตาราง members
+        // Update member's money
         const sqlUpdate = "UPDATE members SET money = money + ? WHERE member_id = ?";
+        const [resultUp] = await db.promise().query(sqlUpdate, [price, member_id]);
 
-        db.query(sqlUpdate, [price, member_id], (err, resultUp) => {
-            if (err) {
-                console.error('Error executing update query:', err);
-                return res.status(500).json({ error: 'Error updating member money' });
-            }
+        if (resultUp.affectedRows === 0) {
+            return res.status(404).json({ message: 'ไม่พบสมาชิกที่ต้องการอัปเดตเงิน' });
+        }
 
-            if (resultUp.affectedRows === 0) {
-                return res.status(404).json({ message: 'ไม่พบสมาชิกที่ต้องการอัปเดตเงิน' });
-            }
+        // Delete data from multiple tables
+        const sqlDeleteBasket = "DELETE FROM basket WHERE lotto_id = ?";
+        const sqlDeleteBuy = "DELETE FROM buy WHERE lotto_id = ?";
+        const sqlDeleteLotto = "DELETE FROM lotto WHERE lotto_id = ?";
+        const sqlDeleteReward = "DELETE FROM reward WHERE lotto_id = ?";
+        const sqlDeleteRandomReward = "DELETE FROM random_reward WHERE lotto_id = ?";
 
-            // เมื่ออัปเดตเงินสำเร็จแล้ว ลบข้อมูลในตารางที่เกี่ยวข้อง
-            const sqlDeleteBasket = "DELETE FROM basket WHERE lotto_id = ?";
-            const sqlDeleteBuy = "DELETE FROM buy WHERE lotto_id = ?";
-            const sqlDeleteLotto = "DELETE FROM lotto WHERE lotto_id = ?";
-            const sqlDeleteReward = "DELETE FROM reward WHERE lotto_id = ?";
-            const sqlDeleteRandomReward = "DELETE FROM random_reward WHERE lotto_id = ?";
+        await db.promise().query(sqlDeleteBasket, [lotto_id]);
+        await db.promise().query(sqlDeleteBuy, [lotto_id]);
+        await db.promise().query(sqlDeleteLotto, [lotto_id]);
+        await db.promise().query(sqlDeleteReward, [lotto_id]);
+        await db.promise().query(sqlDeleteRandomReward, [lotto_id]);
 
-            db.query(sqlDeleteBasket, [member_id], (err, resultBasket) => {
-                if (err) {
-                    console.error('Error executing delete from basket:', err);
-                    return res.status(500).json({ error: 'Error deleting data from basket' });
-                }
-
-                db.query(sqlDeleteBuy, [lotto_id], (err, resultBuy) => {
-                    if (err) {
-                        console.error('Error executing delete from buy:', err);
-                        return res.status(500).json({ error: 'Error deleting data from buy' });
-                    }
-
-                    db.query(sqlDeleteLotto, [lotto_id], (err, resultLotto) => {
-                        if (err) {
-                            console.error('Error executing delete from lotto:', err);
-                            return res.status(500).json({ error: 'Error deleting data from lotto' });
-                        }
-
-                        db.query(sqlDeleteReward, [lotto_id], (err, resultReward) => {
-                            if (err) {
-                                console.error('Error executing delete from reward:', err);
-                                return res.status(500).json({ error: 'Error deleting data from reward' });
-                            }
-
-                            db.query(sqlDeleteRandomReward, [lotto_id], (err, resultRandomReward) => {
-                                if (err) {
-                                    console.error('Error executing delete from random_reward:', err);
-                                    return res.status(500).json({ error: 'Error deleting data from random_reward' });
-                                }
-
-                                res.json({ 
-                                    message: 'อัปเดตเงินและลบข้อมูลสำเร็จ',
-                                    updatedRows: resultUp.affectedRows
-                                });
-                            });
-                        });
-                    });
-                });
-            });
-        });
-    });
+        res.json({ message: 'อัปเดตเงินและลบข้อมูลสำเร็จ', updatedRows: resultUp.affectedRows });
+    } catch (err) {
+        console.error('Error executing query:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
 });
+
 
 
 
