@@ -429,6 +429,19 @@ app.get('/get_Lotto_status1', (req, res) => {
     });
 });
 
+//lottoที่ยังไม่ขาย
+app.get('/get_Lotto_status0', (req, res) => {
+    const sql = 'SELECT * FROM lotto where status = 0'; // ดึงข้อมูลทั้งหมดจากตาราง lotto
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error fetching data:', err);
+            res.status(500).send('An error occurred while fetching data.'); // แจ้ง error กรณีเกิดปัญหา
+        } else {
+            res.json(results); // ส่งผลลัพธ์กลับในรูปแบบ JSON
+        }
+    });
+});
+
 //ลบ lotto ออกจากตระกร้า
 app.delete('/removeLottoFromBasket', (req, res) => {
     const { lotto_id, member_id } = req.body; // รับข้อมูลจาก body ของคำขอ
@@ -454,6 +467,8 @@ app.delete('/removeLottoFromBasket', (req, res) => {
         }
     });
 });
+
+
 
 //เติมเงิน
 app.post('/addWallet', (req, res) => {
