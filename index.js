@@ -1191,6 +1191,6 @@ app.get('/count_rows_lotto', (req, res) => {
         }
 
         // Send back the count of rows
-        res.status(200).json({ results });
+        res.status(200).json( results );
     });
 });
