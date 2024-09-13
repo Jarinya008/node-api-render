@@ -70,19 +70,31 @@ app.post('/register', (req, res) => {
     if (!name || !email || !username || !password || !phone || !money) {
         return res.status(400).send('All fields (name, email, username, password, phone, money) are required');
     }
-
-    // SQL query with placeholders
-    const sql = 'INSERT INTO members (name, email, username, password, phone, money) VALUES (?, ?, ?, ?, ?, ?)';
+    const sqlCheck = 'SELECT email FROM members WHERE email = ?';
 
     // Execute the query with values
-    db.query(sql, [name, email, username, password, phone, money], (err, results) => {
+    db.query(sqlCheck, [email], (err, results) => {
         if (err) {
             console.error('Error inserting data:', err);
             return res.status(500).send('An error occurred while inserting data.');
         }
+        if(results.length == 0){
+            // SQL query with placeholders
+            const sql = 'INSERT INTO members (name, email, username, password, phone, money) VALUES (?, ?, ?, ?, ?, ?)';
 
-        res.status(201).send('User registered successfully');
-    });
+            // Execute the query with values
+            db.query(sql, [name, email, username, password, phone, money], (err, results) => {
+                if (err) {
+                    console.error('Error inserting data:', err);
+                    return res.status(500).send('An error occurred while inserting data.');
+                }
+
+                res.status(201).send('User registered successfully');
+            });
+        }else{
+            res.status(201).send('อีเมลนี้ถูกใช้ไปแล้วโปรดใช้อีเมลอื่น');
+        }  
+    }); 
 });
 
 app.post('/login', (req, res) => {
