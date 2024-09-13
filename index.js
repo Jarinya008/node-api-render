@@ -1178,7 +1178,7 @@ app.delete('/reset_system', (req, res) => {
 
 app.get('/count_rows_lotto', (req, res) => {
     // SQL query to count the total number of rows in the lotto table
-    const sql = 'SELECT COUNT(*) FROM lotto';
+    const sql = 'SELECT COUNT(*) AS total FROM lotto';
 
     db.query(sql, (err, results) => {
         if (err) {
